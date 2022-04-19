@@ -1,6 +1,8 @@
 #include "minirt/minirt.h"
+
 #include <cmath>
 #include <iostream>
+#include <omp.h>
 
 using namespace minirt;
 
@@ -42,38 +44,49 @@ void initScene(Scene &scene) {
 }
 
 int main(int argc, char **argv) {
-    int viewPlaneResolutionX = (argc > 1 ? std::stoi(argv[1]) : 600);
-    int viewPlaneResolutionY = (argc > 2 ? std::stoi(argv[2]) : 600);
-    int numOfSamples = (argc > 3 ? std::stoi(argv[3]) : 1);    
-    std::string sceneFile = (argc > 4 ? argv[4] : "");
+        int viewPlaneResolutionX = (argc > 1 ? std::stoi(argv[1]) : 1500);
+        int viewPlaneResolutionY = (argc > 2 ? std::stoi(argv[2]) : 1500);
+        int numOfSamples = (argc > 3 ? std::stoi(argv[3]) : 1);
+        std::string sceneFile = (argc > 4 ? argv[4] : "");
 
-    Scene scene;
-    if (sceneFile.empty()) {
-        initScene(scene);
-    } 
-    else {
-        scene.loadFromFile(sceneFile);
-    }
+        Scene scene;
+		if (sceneFile.empty()) {
+			initScene(scene);
+		} 
+		else {
+			scene.loadFromFile(sceneFile);
+		}
 
-    const double backgroundSizeX = 4;
-    const double backgroundSizeY = 4;
-    const double backgroundDistance = 15;
+        const double backgroundSizeX = 4;
+        const double backgroundSizeY = 4;
+        const double backgroundDistance = 15;
 
-    const double viewPlaneDistance = 5;
-    const double viewPlaneSizeX = backgroundSizeX * viewPlaneDistance / backgroundDistance;
-    const double viewPlaneSizeY = backgroundSizeY * viewPlaneDistance / backgroundDistance;
+        const double viewPlaneDistance = 5;
+        const double viewPlaneSizeX = backgroundSizeX * viewPlaneDistance / backgroundDistance;
+        const double viewPlaneSizeY = backgroundSizeY * viewPlaneDistance / backgroundDistance;
 
-    ViewPlane viewPlane {viewPlaneResolutionX, viewPlaneResolutionY,
-                         viewPlaneSizeX, viewPlaneSizeY, viewPlaneDistance};
+        ViewPlane viewPlane{viewPlaneResolutionX, viewPlaneResolutionY, viewPlaneSizeX, viewPlaneSizeY, viewPlaneDistance};
 
-    Image image(viewPlaneResolutionX, viewPlaneResolutionY); // computed image
-    for(int x = 0; x < viewPlaneResolutionX; x++)
-    for(int y = 0; y < viewPlaneResolutionY; y++) {
-        const auto color = viewPlane.computePixel(scene, x, y, numOfSamples);
-        image.set(x, y, color);
-    }
+        Image image(viewPlaneResolutionX, viewPlaneResolutionY);
 
-    image.saveJPEG("raytracing.jpg");
+		double start = omp_get_wtime();
+    
+		# pragma omp parallel for num_threads(16) ___
+        for (int x = 0; x < viewPlaneResolutionX; x++)
+        {
+            for (int y = 0; y < viewPlaneResolutionY; y++)
+            {
+                const auto color = viewPlane.computePixel(scene, x, y, numOfSamples);
+                image.set(x, y, color);
+            }
+        }
+       
+		double end = omp_get_wtime();
+
+		std::cout << "Time: " << end - start << "\n" << std::endl;
+
+
+		image.saveJPEG("raytracing.jpg");
 
     return 0;
 }
