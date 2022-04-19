@@ -1,5 +1,4 @@
 #include "minirt/minirt.h"
-
 #include <cmath>
 #include <iostream>
 
@@ -51,7 +50,8 @@ int main(int argc, char **argv) {
     Scene scene;
     if (sceneFile.empty()) {
         initScene(scene);
-    } else {
+    } 
+    else {
         scene.loadFromFile(sceneFile);
     }
 
